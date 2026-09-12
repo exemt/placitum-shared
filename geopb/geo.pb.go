@@ -355,7 +355,7 @@ const file_geo_proto_rawDesc = "" +
 	"\x04asns\x18\x02 \x03(\v2\v.geo.v1.ASNR\x04asns\x12\x10\n" +
 	"\x03gen\x18\x03 \x01(\x04R\x03gen2>\n" +
 	"\x03Geo\x127\n" +
-	"\x06Lookup\x12\x15.geo.v1.LookupRequest\x1a\x16.geo.v1.LookupResponseB&Z$github.com/nginx-waf/geo/proto;geopbb\x06proto3"
+	"\x06Lookup\x12\x15.geo.v1.LookupRequest\x1a\x16.geo.v1.LookupResponseB.Z,github.com/exemt/placitum-shared/geopb;geopbb\x06proto3"
 
 var (
 	file_geo_proto_rawDescOnce sync.Once

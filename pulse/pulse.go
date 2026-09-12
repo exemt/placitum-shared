@@ -28,11 +28,15 @@ import (
 
 // Frame -- шапка кадра любого процесса контура.
 type Frame struct {
-	V        int                  `json:"v"`
-	Kind     string               `json:"kind"`
-	ID       string               `json:"id"`
-	Name     string               `json:"name"`
-	Hostname string               `json:"hostname"`
+	V        int    `json:"v"`
+	Kind     string `json:"kind"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Hostname string `json:"hostname"`
+	// Version и Revision -- сборка процесса: метки образа, переданные в бинарь
+	// при сборке. Пусто у сборки без них.
+	Version  string               `json:"version,omitempty"`
+	Revision string               `json:"revision,omitempty"`
 	Ready    bool                 `json:"ready"`
 	At       string               `json:"at"`
 	Host     host.Snapshot        `json:"host"`

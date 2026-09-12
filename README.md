@@ -35,7 +35,7 @@ import "github.com/exemt/placitum-shared/pulse"
 ```
 
 ```sh
-go get github.com/exemt/placitum-shared@v0.3.0
+go get github.com/exemt/placitum-shared@v0.4.0
 ```
 
 Компонент **пинует версию** в своём `go.mod` и обновляет её, когда ему нужно. В платформе рядом

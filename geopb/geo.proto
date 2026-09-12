@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package geo.v1;
 
-option go_package = "github.com/nginx-waf/geo/proto;geopb";
+option go_package = "github.com/exemt/placitum-shared/geopb;geopb";
 
 service Geo {
   rpc Lookup(LookupRequest) returns (LookupResponse);
