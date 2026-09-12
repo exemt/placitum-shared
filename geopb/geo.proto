@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package geo.v1;
+
+option go_package = "github.com/nginx-waf/geo/proto;geopb";
+
+service Geo {
+  rpc Lookup(LookupRequest) returns (LookupResponse);
+}
+
+message LookupRequest {
+  string addr = 1;
+  // Дописать каждой системе её состав целиком: все анонсы. Второй ярус
+  // бана -- «система целиком»; без просьбы ответ лёгкий, для корзин.
+  bool expand_asn = 2;
+}
+
+message Country {
+  string code = 1;
+  string name = 2;
+}
+
+// Эффективный кусок под адресом: анонс минус более узкие, включительно.
+message Range {
+  string start = 1;
+  string end = 2;
+}
+
+message ASN {
+  uint32 asn = 1;
+  string name = 2;
+  // Анонс, накрывший адрес. Ответ на адрес несёт все накрывающие, от
+  // самого узкого к самому широкому; эффективный -- первым.
+  string prefix = 3;
+  bool effective = 4;
+  Range range = 5;
+  // Состав системы; только при expand_asn.
+  repeated string prefixes = 6;
+}
+
+message LookupResponse {
+  repeated Country countries = 1;
+  repeated ASN asns = 2;
+  // Поколение снимка кодера: сменилось -- кэши клиентов устарели.
+  uint64 gen = 3;
+}
