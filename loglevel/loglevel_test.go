@@ -3,6 +3,7 @@ package loglevel
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
 )
 
@@ -68,6 +69,21 @@ func TestStringRoundTrips(t *testing.T) {
 		if String(level) != name {
 			t.Fatalf("%s -> %v -> %s", name, level, String(level))
 		}
+	}
+}
+
+func TestEnvNamesVariable(t *testing.T) {
+	t.Setenv("WAF_TEST_LOG", "loud")
+
+	if _, err := Env("WAF_TEST_LOG", "info"); err == nil ||
+		!strings.Contains(err.Error(), "WAF_TEST_LOG") {
+		t.Fatalf("ошибка без имени переменной: %v", err)
+	}
+
+	t.Setenv("WAF_TEST_LOG", "")
+
+	if got, err := Env("WAF_TEST_LOG", "warn"); err != nil || got != slog.LevelWarn {
+		t.Fatalf("fallback: %v %v", got, err)
 	}
 }
 

@@ -14,8 +14,10 @@
  * способности, а рестарт под прогоном обнуляет прогон
  * (docs/inspector-config-distribution.md, «Настройки процесса»).
  *
- * Стартовое значение -- переменная окружения WAF_<ИМЯ>_LOG; первое поколение
- * из KV с блоком settings перебивает её.
+ * Стартовое значение -- переменная окружения процесса (Env): WAF_<ИМЯ>_LOG у
+ * инспектора, WAF_<СЕРВИС>_LOG у сервиса. Дальше порог живёт своей жизнью: у
+ * инспектора его перебивает первое поколение из KV с блоком settings, у
+ * сервиса -- документ policy/log-levels (logkit).
  */
 
 package loglevel
@@ -23,6 +25,7 @@ package loglevel
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 )
 
@@ -90,4 +93,24 @@ func String(level slog.Level) string {
 	}
 
 	return level.String()
+}
+
+/*
+ * Env -- стартовый порог из переменной окружения процесса (WAF_AGENT_LOG,
+ * WAF_LOGGER_LOG, ...). Пусто -- fallback. Чужое слово -- ошибка старта с
+ * именем переменной: процесс, молча севший на info вместо заказанного debug,
+ * отнимает ровно то расследование, ради которого debug и заказывали.
+ */
+func Env(name, fallback string) (slog.Level, error) {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		value = fallback
+	}
+
+	level, err := Parse(value)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", name, err)
+	}
+
+	return level, nil
 }
