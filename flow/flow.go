@@ -62,7 +62,7 @@ func (c *Counter) Add(in, out uint64, isErr bool, latency time.Duration) {
 // точен, задержка — это задержка пачки, приписанная каждой строке в ней, а
 // не время самой строки, которую поштучно измерить не выйдет.
 func (c *Counter) AddN(n int, in, out uint64, isErr bool, latency time.Duration) {
-	if n <= 0 {
+	if c == nil || n <= 0 {
 		return
 	}
 	c.mu.Lock()
@@ -87,7 +87,13 @@ func (c *Counter) AddN(n int, in, out uint64, isErr bool, latency time.Duration)
 	}
 }
 
+// Snapshot -- темп за окно. Nil-счётчик -- канал, которого у процесса нет:
+// пустой темп, а не паника в кадре присутствия.
 func (c *Counter) Snapshot() Flow {
+	if c == nil {
+		return Flow{}
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	now := c.unix()

@@ -116,3 +116,12 @@ func TestWindowSlidesGradually(t *testing.T) {
 		t.Fatalf("first op fell out of the window: ops = %v, want 0.1", got.Ops)
 	}
 }
+
+func TestNilCounterIsNoop(t *testing.T) {
+	var c *Counter
+	c.Add(1, 2, true, time.Millisecond)
+	c.AddN(3, 1, 1, false, time.Millisecond)
+	if got := c.Snapshot(); got != (Flow{}) {
+		t.Fatalf("nil snapshot: %+v", got)
+	}
+}

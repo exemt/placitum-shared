@@ -1,7 +1,13 @@
 /*
- * Присутствие на WAF_STATUS — та же шина, что у агента и воркера.
- * Не вердикт и не probe-healthcheck контейнера. Контроллер слушает
- * WAF_STATUS.> и ставит degraded по тишине.
+ * Присутствие на WAF_STATUS: кто, где, сколько работает. Не вердикт и не
+ * healthcheck контейнера. Контроллер слушает WAF_STATUS.> и ставит degraded
+ * по тишине.
+ *
+ * Кадр у каждого процесса свой -- у инспектора очередь и профили, у keeper
+ * наборы, у агента Redis снимок хранилища, -- но шапка одна: Frame. Процесс
+ * встраивает её в свою структуру, поля ложатся в тот же объект JSON, а
+ * контроллер разбирает то, что знает по kind, и пропускает остальное.
+ * Message -- кадр инспектора, собранный так же.
  */
 
 package pulse
@@ -20,6 +26,44 @@ import (
 	"github.com/exemt/placitum-shared/host"
 )
 
+// Frame -- шапка кадра любого процесса контура.
+type Frame struct {
+	V        int                  `json:"v"`
+	Kind     string               `json:"kind"`
+	ID       string               `json:"id"`
+	Name     string               `json:"name"`
+	Hostname string               `json:"hostname"`
+	Ready    bool                 `json:"ready"`
+	At       string               `json:"at"`
+	Host     host.Snapshot        `json:"host"`
+	WindowS  int                  `json:"window_s,omitempty"`
+	IO       map[string]flow.Flow `json:"io,omitempty"`
+}
+
+/*
+ * NewFrame -- шапка с временем и снимком машины, снятыми здесь. io -- темп
+ * каналов за окно flow.Window; процесс, у которого окно своё (агенты
+ * хранилищ меряют его по снимку хранилища), кладёт IO и WindowS сам.
+ */
+func NewFrame(kind, id, name string, ready bool, io map[string]flow.Flow) Frame {
+	f := Frame{
+		V:        1,
+		Kind:     kind,
+		ID:       id,
+		Name:     name,
+		Hostname: host.Hostname(),
+		Ready:    ready,
+		At:       time.Now().UTC().Format(time.RFC3339Nano),
+		Host:     host.Collect(),
+	}
+	if len(io) > 0 {
+		f.WindowS = flow.Window
+		f.IO = io
+	}
+	return f
+}
+
+// Work -- очередь инспектора.
 type Work struct {
 	Workers    int   `json:"workers,omitempty"`
 	QueueDepth int   `json:"queue_depth,omitempty"`
@@ -29,24 +73,16 @@ type Work struct {
 	Expired    int64 `json:"expired,omitempty"`
 }
 
+// Message -- кадр инспектора: шапка, адрес на шине, очередь, поколение.
 type Message struct {
-	V          int                  `json:"v"`
-	Kind       string               `json:"kind"`
-	ID         string               `json:"id"`
-	Name       string               `json:"name"`
-	Subject    string               `json:"subject"`
-	Queue      string               `json:"queue"`
-	Hostname   string               `json:"hostname"`
-	Ready      bool                 `json:"ready"`
-	At         string               `json:"at"`
-	Host       host.Snapshot        `json:"host"`
-	Work       *Work                `json:"work,omitempty"`
-	WindowS    int                  `json:"window_s,omitempty"`
-	IO         map[string]flow.Flow `json:"io,omitempty"`
-	ConfigHash string               `json:"config_hash,omitempty"`
-	Rev        int                  `json:"rev,omitempty"`
-	Apply      string               `json:"apply,omitempty"`
-	Profiles   []string             `json:"profiles,omitempty"`
+	Frame
+	Subject    string   `json:"subject"`
+	Queue      string   `json:"queue"`
+	Work       *Work    `json:"work,omitempty"`
+	ConfigHash string   `json:"config_hash,omitempty"`
+	Rev        int      `json:"rev,omitempty"`
+	Apply      string   `json:"apply,omitempty"`
+	Profiles   []string `json:"profiles,omitempty"`
 }
 
 func NewID() string {
@@ -55,29 +91,28 @@ func NewID() string {
 	return hex.EncodeToString(b[:])
 }
 
+// Subject -- адрес кадра инспектора.
 func Subject(name, id string) string {
 	return fmt.Sprintf("WAF_STATUS.inspector.%s.%s", token(name), token(id))
 }
 
+// ServiceSubject -- адрес кадра сервиса: keeper, geo, логгер, агент haproxy.
+func ServiceSubject(name, id string) string {
+	return fmt.Sprintf("WAF_STATUS.service.%s.%s", token(name), token(id))
+}
+
+// StoreSubject -- адрес кадра агента хранилища: kind -- redis или s3.
+func StoreSubject(kind, id string) string {
+	return fmt.Sprintf("WAF_STATUS.store.%s.%s", token(kind), token(id))
+}
+
 func Build(id, name, subject, queue string, work *Work, io map[string]flow.Flow) Message {
-	msg := Message{
-		V:        1,
-		Kind:     "inspector",
-		ID:       id,
-		Name:     name,
-		Subject:  subject,
-		Queue:    queue,
-		Hostname: host.Hostname(),
-		Ready:    true,
-		At:       time.Now().UTC().Format(time.RFC3339Nano),
-		Host:     host.Collect(),
-		Work:     work,
+	return Message{
+		Frame:   NewFrame("inspector", id, name, true, io),
+		Subject: subject,
+		Queue:   queue,
+		Work:    work,
 	}
-	if len(io) > 0 {
-		msg.WindowS = flow.Window
-		msg.IO = io
-	}
-	return msg
 }
 
 func Publish(nc *nats.Conn, msg Message) error {
@@ -85,9 +120,10 @@ func Publish(nc *nats.Conn, msg Message) error {
 }
 
 /*
- * PublishFrame — тот же кадр, но с полями, которых нет у соседей: список живых
- * наборов у инспектора адреса, счётчики вердиктов у капчи. Процесс встраивает
- * Message в свою структуру, и её поля ложатся в тот же объект JSON:
+ * PublishFrame — кадр с полями, которых нет у соседей: список живых наборов
+ * у инспектора адреса, счётчики вердиктов у капчи, снимок хранилища у агента
+ * Redis. Процесс встраивает Message (инспектор) или Frame (сервис) в свою
+ * структуру, и её поля ложатся в тот же объект JSON:
  *
  *	type frame struct {
  *		pulse.Message
