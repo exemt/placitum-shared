@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package geo.v1;
+
+option go_package = "github.com/exemt/placitum-shared/geopb;geopb";
+
+service Geo {
+  rpc Lookup(LookupRequest) returns (LookupResponse);
+}
+
+message LookupRequest {
+  string addr = 1;
+  // Include the full composition of every AS: all its announcements. Used by
+  // the second ban tier, "the whole AS"; without it the answer stays light enough for buckets.
+  bool expand_asn = 2;
+}
+
+message Country {
+  string code = 1;
+  string name = 2;
+}
+
+// Effective range under the address: the announcement minus narrower ones, inclusive.
+message Range {
+  string start = 1;
+  string end = 2;
+}
+
+message ASN {
+  uint32 asn = 1;
+  string name = 2;
+  // Announcement covering the address. An address lookup returns all covering
+  // ones, from the narrowest to the widest; the effective one comes first.
+  string prefix = 3;
+  bool effective = 4;
+  Range range = 5;
+  // AS composition; only with expand_asn.
+  repeated string prefixes = 6;
+}
+
+message LookupResponse {
+  repeated Country countries = 1;
+  repeated ASN asns = 2;
+  // Coder snapshot generation: when it changes, client caches are stale.
+  uint64 gen = 3;
+}
