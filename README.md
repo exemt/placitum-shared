@@ -16,8 +16,8 @@ its own way stays in that component.
 | `loglevel` | nginx log levels (`debug` … `alert`), their parsing and the starting threshold from a process environment variable |
 | `logkit` | service log: lines go to `waf.log` in `kind=log` batches, the live threshold follows the `policy/log-levels` document |
 | `dataset` | writes to active datasets through keeper: synchronously in HTTP processes, in the background in inspectors |
-| `netinfo` | geo coder client: announcements, AS composition, cache and negative cache |
-| `geopb` | generated gRPC client of the geo coder; `geo.proto` is a copy of the contract owned by the coder |
+| `netinfo` | network directory client: announcements, AS composition, cache and negative cache |
+| `geopb` | generated gRPC client of the network directory; `geo.proto` is a copy of the contract owned by the network directory |
 
 ## Usage
 
