@@ -10,7 +10,7 @@ its own way stays in that component.
 
 | Package | What it does |
 | --- | --- |
-| `pulse` | presence frame on `WAF_STATUS`: who is running, where and for how long. It is neither a verdict nor a health check. `Frame` is embedded in the frame of any process, `Message` is the inspector frame |
+| `pulse` | presence frame on `WAF_STATUS`: who is running, where and for how long. `Frame` is embedded in the frame of any process, `Message` is the inspector frame |
 | `host` | machine snapshot for the frame: cores, memory, load |
 | `flow` | I/O counters: how much was received and sent within a window |
 | `loglevel` | nginx log levels (`debug` … `alert`), their parsing and the starting threshold from a process environment variable |
@@ -36,20 +36,14 @@ verdict counters, keeper adds datasets, the Redis agent adds a store snapshot. T
 not grow because of that. A process embeds `pulse.Frame` (service) or `pulse.Message` (inspector)
 in its own struct and sends it with `pulse.PublishFrame`; the fields end up in one JSON object.
 
-## What is not here
-
-Inspector decisions: profiles, conditions, verdicts, thresholds and policy. That is what a component
-is for.
-
 ## Versions
 
-Semantic versioning. A major version does not break for convenience: more than a dozen components
-cannot be rewritten at once. Bus contract changes go the other way round: every reader first, then
-the writers.
+Semantic versioning. Major versions are rare, because more than a dozen components cannot be
+rewritten at once. A bus contract changes in two steps: every reader first, then the writers.
 
 ## License
 
 [Apache License 2.0](LICENSE); the attribution notice is in [NOTICE](NOTICE). This repository is
 part of the Placitum open core. The inspectors are licensed separately: each inspector repository
-carries the Placitum License Agreement. Releases made before this change came under the Placitum
+carries the Placitum License Agreement. Versions up to 1.0.1 were released under the Placitum
 License Agreement 1.1.
