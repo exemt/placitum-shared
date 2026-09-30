@@ -38,8 +38,8 @@ in its own struct and sends it with `pulse.PublishFrame`; the fields end up in o
 
 ## Versions
 
-Semantic versioning. Major versions are rare, because more than a dozen components cannot be
-rewritten at once. A bus contract changes in two steps: every reader first, then the writers.
+Semantic versioning. Major versions are rare. A bus contract changes in two steps: every reader
+first, then the writers.
 
 ## License
 
